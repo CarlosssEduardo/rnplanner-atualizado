@@ -12,7 +12,6 @@ import java.time.LocalDate;
 @CrossOrigin(origins = "*")
 public class PendenciaManualController {
 
-    // 🔥 Aqui o nome oficial agora é pendenciaManualRepository para não ter erro!
     private final PendenciaManualRepository pendenciaManualRepository;
 
     public PendenciaManualController(PendenciaManualRepository pendenciaManualRepository) {
@@ -26,7 +25,6 @@ public class PendenciaManualController {
         return ResponseEntity.ok(pendenciaManualRepository.save(pendencia));
     }
 
-    // ✅ ROTA CORRIGIDA: Marcar como resolvida
     @PutMapping("/resolver/{id}")
     public ResponseEntity<String> resolver(@PathVariable Long id) {
         pendenciaManualRepository.findById(id).ifPresent(p -> {
@@ -36,7 +34,6 @@ public class PendenciaManualController {
         return ResponseEntity.ok("Pendência resolvida!");
     }
 
-    // 🗑️ ROTA CORRIGIDA: Apagar de vez
     @DeleteMapping("/deletar/{id}")
     public ResponseEntity<String> deletar(@PathVariable Long id) {
         pendenciaManualRepository.deleteById(id);

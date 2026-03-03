@@ -16,7 +16,6 @@ import java.util.Optional;
 public interface VisitaRepository extends JpaRepository<Visita, Long> {
 
     // 🔥 A MÁGICA DA BLINDAGEM: Apaga o histórico de visitas vinculadas aos setores do Excel
-    // Isso impede o erro de integridade (Foreign Key) quando o sistema for apagar o PDV.
     @Modifying
     @Transactional
     @Query("DELETE FROM Visita v WHERE v.pdv.setor IN :setores")
@@ -30,30 +29,9 @@ public interface VisitaRepository extends JpaRepository<Visita, Long> {
     // Busca o histórico mais recente (de qualquer data) para as observações
     Optional<Visita> findFirstByPdvIdOrderByIdDesc(Long pdvId);
 
-    // Queries do Dia
-    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.data = :data AND v.finalizada = true")
-    long sumTasksByData(@Param("data") LocalDate data);
-
-    @Query("SELECT COALESCE(SUM(v.qtdOfertas), 0) FROM Visita v WHERE v.data = :data AND v.finalizada = true")
-    long sumOfertasByData(@Param("data") LocalDate data);
-
-    @Query("SELECT COALESCE(SUM(v.qtdMissoes), 0) FROM Visita v WHERE v.data = :data AND v.finalizada = true")
-    long sumMissoesByData(@Param("data") LocalDate data);
-
-    @Query("SELECT v.pdv.id FROM Visita v WHERE v.data = :data AND v.finalizada = true")
-    List<Long> findPdvIdsVisitadosHoje(@Param("data") LocalDate data);
-
-    // Queries do Mês
-    @Query("SELECT COUNT(DISTINCT v.data) FROM Visita v WHERE v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
-    int countDiasTrabalhadosNoMes(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
-
-    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
-    int sumTasksNoMes(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
-
-    @Query("SELECT v.observacao FROM Visita v WHERE v.data >= :inicio AND v.data <= :fim AND v.finalizada = true AND v.observacao IS NOT NULL")
-    List<String> findAllObservacoesNoMes(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
-
-    // 🔥 Queries do Dia (Agora blindadas por Setor)
+    // ==========================================
+    // QUERIES DO DIA (PARA A BARRA DE PROGRESSO)
+    // ==========================================
     @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.data = :data AND v.finalizada = true AND v.pdv.setor = :setor")
     long sumTasksByDataAndSetor(@Param("data") LocalDate data, @Param("setor") String setor);
 
@@ -65,4 +43,26 @@ public interface VisitaRepository extends JpaRepository<Visita, Long> {
 
     @Query("SELECT v.pdv.id FROM Visita v WHERE v.data = :data AND v.finalizada = true AND v.pdv.setor = :setor")
     List<Long> findPdvIdsVisitadosHojePorSetor(@Param("data") LocalDate data, @Param("setor") String setor);
+
+    // ==========================================
+    // QUERIES DO MÊS (PARA O RESUMO DA JORNADA)
+    // 🔥 Agora blindadas por Setor para não somar a CDD inteira!
+    // ==========================================
+
+    @Query("SELECT COUNT(DISTINCT v.data) FROM Visita v WHERE v.pdv.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
+    int countDiasTrabalhadosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+
+    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.pdv.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
+    long sumTasksNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+
+    // 🔥 NOVA: Conta quantos problemas foram resolvidos (status RESOLVIDO) no mês por setor
+    @Query("SELECT COUNT(v) FROM Visita v WHERE v.pdv.setor = :setor AND v.pendenciaStatus = 'RESOLVIDO' AND v.data >= :inicio AND v.data <= :fim")
+    long countProblemasResolvidosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+
+    @Query("SELECT v.observacao FROM Visita v WHERE v.pdv.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true AND v.observacao IS NOT NULL")
+    List<String> findAllObservacoesNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+
+    // Queries Globais (Opcionais se você ainda usar em algum painel geral)
+    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.data = :data AND v.finalizada = true")
+    long sumTasksByData(@Param("data") LocalDate data);
 }

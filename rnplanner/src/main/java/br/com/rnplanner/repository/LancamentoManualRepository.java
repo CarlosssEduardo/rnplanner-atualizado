@@ -24,4 +24,9 @@ public interface LancamentoManualRepository extends JpaRepository<LancamentoManu
     // Soma as Missões Avulsas do dia
     @Query("SELECT COALESCE(SUM(l.missoes), 0) FROM LancamentoManual l WHERE l.data = :data AND l.setor = :setor")
     long sumMissoesManuais(@Param("data") LocalDate data, @Param("setor") String setor);
+
+    @Query("SELECT COALESCE(SUM(l.tasks), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data >= :inicio AND l.data <= :fim")
+    long sumTasksManuaisNoMes(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+
+    // Se você tiver uma tabela/repository para PendenciaManual, adicione a contagem de resolvidos lá também.
 }
