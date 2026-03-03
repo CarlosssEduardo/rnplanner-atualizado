@@ -5,6 +5,8 @@ import br.com.rnplanner.repository.EntregaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -119,12 +121,21 @@ public class EntregaController {
     private LocalDateTime parseLocalDateTime(String str) {
         if (str == null || str.trim().isEmpty()) return null;
         try {
-            // O CSV manda a data assim: "2026-02-25T11:21:55.237Z"
-            // Isso recorta apenas o "2026-02-25T11:21:55" pro Java aceitar liso.
+            // 🔥 O SEGREDO DO FUSO HORÁRIO AQUI:
+            // O CSV da logística manda a data com "Z" no final (UTC/Londres).
+            if (str.trim().endsWith("Z")) {
+                Instant instanteUtc = Instant.parse(str.trim());
+                // Converte magicamente para o fuso de Brasília (-3 horas)
+                return LocalDateTime.ofInstant(instanteUtc, ZoneId.of("America/Sao_Paulo"));
+            }
+
+            // Plano B (Se o CSV vier sem o Z, a gente recorta e aceita)
             if (str.length() >= 19) {
                 return LocalDateTime.parse(str.substring(0, 19));
             }
             return LocalDateTime.parse(str.trim());
-        } catch (Exception e) { return null; }
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
