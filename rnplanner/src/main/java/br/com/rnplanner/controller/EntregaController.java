@@ -100,7 +100,7 @@ public class EntregaController {
                 horarioTexto = "Carga Adiada";
             } else if (entrega.getVisitOrder() != null && entrega.getVisitOrder() > 0) {
                 // Se estiver pendente, mostra qual é a posição do cliente na fila do caminhão!
-                horarioTexto = "Parada Nº " + entrega.getVisitOrder() + " da Rota";
+                horarioTexto = "Chegada estimada: Parada Nº " + entrega.getVisitOrder() + " da fila";
             }
 
             response.put("horario", horarioTexto); // Envia o horário pro Front!
