@@ -12,16 +12,34 @@ import java.time.LocalDate;
 @CrossOrigin(origins = "*")
 public class PendenciaManualController {
 
-    private final PendenciaManualRepository repository;
+    // 🔥 Aqui o nome oficial agora é pendenciaManualRepository para não ter erro!
+    private final PendenciaManualRepository pendenciaManualRepository;
 
-    public PendenciaManualController(PendenciaManualRepository repository) {
-        this.repository = repository;
+    public PendenciaManualController(PendenciaManualRepository pendenciaManualRepository) {
+        this.pendenciaManualRepository = pendenciaManualRepository;
     }
 
     @PostMapping("/salvar")
     public ResponseEntity<PendenciaManual> salvarPendenciaAvulsa(@RequestBody PendenciaManual pendencia) {
         pendencia.setData(LocalDate.now());
-        pendencia.setStatus("PENDENTE"); // Força o status inicial
-        return ResponseEntity.ok(repository.save(pendencia));
+        pendencia.setStatus("PENDENTE");
+        return ResponseEntity.ok(pendenciaManualRepository.save(pendencia));
+    }
+
+    // ✅ ROTA CORRIGIDA: Marcar como resolvida
+    @PutMapping("/resolver/{id}")
+    public ResponseEntity<String> resolver(@PathVariable Long id) {
+        pendenciaManualRepository.findById(id).ifPresent(p -> {
+            p.setStatus("RESOLVIDO");
+            pendenciaManualRepository.save(p);
+        });
+        return ResponseEntity.ok("Pendência resolvida!");
+    }
+
+    // 🗑️ ROTA CORRIGIDA: Apagar de vez
+    @DeleteMapping("/deletar/{id}")
+    public ResponseEntity<String> deletar(@PathVariable Long id) {
+        pendenciaManualRepository.deleteById(id);
+        return ResponseEntity.ok("Pendência removida!");
     }
 }
