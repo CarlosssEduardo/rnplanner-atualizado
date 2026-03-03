@@ -74,7 +74,7 @@ public class VisitaService {
         LocalDate inicio = LocalDate.now().withDayOfMonth(1);
         LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-        int dias = visitaRepository.countDiasTrabalhadosNoMesPorSetor(inicio, fim, setor);
+        int dias = (int) visitaRepository.countDiasTrabalhadosNoMesPorSetor(inicio, fim, setor);
         int tasks = (int) visitaRepository.sumTasksNoMesPorSetor(inicio, fim, setor);
         int resolvidos = (int) visitaRepository.countProblemasResolvidosNoMesPorSetor(inicio, fim, setor);
 

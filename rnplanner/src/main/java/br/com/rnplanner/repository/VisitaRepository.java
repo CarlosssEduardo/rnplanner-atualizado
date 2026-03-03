@@ -47,7 +47,7 @@ public interface VisitaRepository extends JpaRepository<Visita, Long> {
     // ==========================================
 
     @Query("SELECT COUNT(DISTINCT v.data) FROM Visita v WHERE v.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
-    int countDiasTrabalhadosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+    long countDiasTrabalhadosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
 
     @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
     long sumTasksNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
