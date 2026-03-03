@@ -6,10 +6,13 @@ import br.com.rnplanner.dto.FinalizarVisitaDTO;
 import br.com.rnplanner.dto.ResumoMesDTO;
 import br.com.rnplanner.dto.VisitaRelatorioDTO;
 import br.com.rnplanner.model.Visita;
+import br.com.rnplanner.model.PendenciaManual; // 🔥 NOVO IMPORT
 import br.com.rnplanner.service.VisitaService;
+import br.com.rnplanner.repository.PendenciaManualRepository; // 🔥 NOVO IMPORT
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList; // 🔥 NOVO IMPORT
 import java.util.List;
 
 @RestController
@@ -18,9 +21,12 @@ import java.util.List;
 public class VisitaController {
 
     private final VisitaService visitaService;
+    private final PendenciaManualRepository pendenciaManualRepository; // 🔥 INJETANDO A TORNEIRA NOVA
 
-    public VisitaController(VisitaService visitaService) {
+    // 🔥 CONSTRUTOR ATUALIZADO
+    public VisitaController(VisitaService visitaService, PendenciaManualRepository pendenciaManualRepository) {
         this.visitaService = visitaService;
+        this.pendenciaManualRepository = pendenciaManualRepository;
     }
 
     @PostMapping("/iniciar/{pdvId}")
@@ -64,9 +70,29 @@ public class VisitaController {
         return ResponseEntity.ok(visitaService.obterResumo(id));
     }
 
-    // 🔥 ROTA BLINDADA: Pendências apenas do setor! (Ex: /visitas/pendencias/501)
+    // 🔥 ROTA BLINDADA E MISTURADA: Pendências apenas do setor! (Ex: /visitas/pendencias/501)
     @GetMapping("/pendencias/{setor}")
     public ResponseEntity<List<PendenciaDTO>> listarPendenciasGlobais(@PathVariable String setor) {
-        return ResponseEntity.ok(visitaService.listarPendenciasGlobaisPorSetor(setor));
+
+        // 1. Torneira Oficial (Vem dos PDVs)
+        List<PendenciaDTO> pendencias = new ArrayList<>(visitaService.listarPendenciasGlobaisPorSetor(setor));
+
+        // 2. Torneira Manual (Vem das anotações da rua)
+        List<PendenciaManual> manuais = pendenciaManualRepository.findBySetorAndStatus(setor, "PENDENTE");
+
+        // 3. O Disfarce: Transforma a anotação manual em um "PendenciaDTO" para o React entender
+        for (PendenciaManual pm : manuais) {
+            PendenciaDTO dto = new PendenciaDTO();
+            dto.setId("MANUAL-" + pm.getId()); // ID falso só pro React não bugar a lista
+            dto.setPdvId(0L); // Zero indica que não tem loja vinculada
+            dto.setPdvNome("Anotação Avulsa"); // Vai aparecer isso destacado no aplicativo!
+            dto.setTexto(pm.getTexto());
+            dto.setStatus(pm.getStatus());
+
+            pendencias.add(dto); // Adiciona na lista principal
+        }
+
+        // Devolve tudo misturado pro Front-end!
+        return ResponseEntity.ok(pendencias);
     }
 }

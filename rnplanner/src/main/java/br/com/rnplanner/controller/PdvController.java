@@ -3,6 +3,9 @@ package br.com.rnplanner.controller;
 import br.com.rnplanner.model.Pdv;
 import br.com.rnplanner.service.PdvService;
 import br.com.rnplanner.repository.PdvRepository;
+// 🔥 IMPORT NOVO AQUI (A Lista VIP)
+import br.com.rnplanner.repository.SetorPermitidoRepository;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,13 +18,15 @@ import java.util.List;
 public class PdvController {
 
     private final PdvService pdvService;
-    // 🔥 ERRO 1 RESOLVIDO: Injetamos o Repositório aqui!
     private final PdvRepository pdvRepository;
+    // 🔥 NOVO: Injetamos o Repositório da Lista VIP aqui!
+    private final SetorPermitidoRepository setorPermitidoRepository;
 
-    // 🔥 O Construtor agora recebe o Service e o Repository
-    public PdvController(PdvService pdvService, PdvRepository pdvRepository) {
+    // 🔥 O Construtor agora recebe os 3 (Service, PdvRepo e SetorVIPRepo)
+    public PdvController(PdvService pdvService, PdvRepository pdvRepository, SetorPermitidoRepository setorPermitidoRepository) {
         this.pdvService = pdvService;
         this.pdvRepository = pdvRepository;
+        this.setorPermitidoRepository = setorPermitidoRepository;
     }
 
     @PostMapping("/upload")
@@ -39,15 +44,23 @@ public class PdvController {
         return ResponseEntity.ok(pdvService.listarPorDia(dia));
     }
 
-    // 🔥 A Rota exclusiva de listar por Setor
     @GetMapping("/setor/{setor}")
     public ResponseEntity<List<Pdv>> listarPdvsPorSetor(@PathVariable String setor) {
         return ResponseEntity.ok(pdvRepository.findBySetor(setor));
     }
 
-    // 🔥 ROTA DO SEGURANÇA: Retorna TRUE se o setor existir no banco
+    // 🔥 A MÁGICA DAS DUAS PORTAS ACONTECE AQUI!
     @GetMapping("/verificar/{setor}")
     public ResponseEntity<Boolean> verificarSetor(@PathVariable String setor) {
-        return ResponseEntity.ok(pdvRepository.existsBySetor(setor));
+        // Verifica se o setor está na tabela VIP nova
+        boolean naListaVip = setorPermitidoRepository.existsBySetor(setor);
+
+        // Verifica se já existem PDVs reais cadastrados para esse setor (a regra antiga)
+        boolean temPdvCadastrado = pdvRepository.existsBySetor(setor);
+
+        // Se ele estiver na lista VIP OU (||) já tiver PDV, ele entra!
+        boolean acessoLiberado = naListaVip || temPdvCadastrado;
+
+        return ResponseEntity.ok(acessoLiberado);
     }
 }
