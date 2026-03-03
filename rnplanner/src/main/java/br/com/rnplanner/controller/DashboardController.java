@@ -1,7 +1,7 @@
 package br.com.rnplanner.controller;
 
 import br.com.rnplanner.dto.DashboardDiaDTO;
-import br.com.rnplanner.dto.ResumoMesDTO; // 🔥 IMPORT NOVO
+import br.com.rnplanner.dto.ResumoMesDTO;
 import br.com.rnplanner.repository.VisitaRepository;
 import br.com.rnplanner.repository.LancamentoManualRepository;
 import org.springframework.http.ResponseEntity;
@@ -64,10 +64,10 @@ public class DashboardController {
         LocalDate inicio = LocalDate.now().withDayOfMonth(1);
         LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-        // 📅 1. Dias Trabalhados (Contagem de datas diferentes com visitas no setor)
-        int diasTrabalhados = visitaRepository.countDiasTrabalhadosNoMesPorSetor(inicio, fim, setor);
+        // 🔥 A BLINDAGEM PARA A AZURE ESTÁ AQUI: Adicionado o cast (int)
+        int diasTrabalhados = (int) visitaRepository.countDiasTrabalhadosNoMesPorSetor(inicio, fim, setor);
 
-        // ✅ 2. Problemas Resolvidos no Mês (Apenas desse setor)
+        // 🔥 E AQUI: Adicionado o cast (int)
         int problemasResolvidos = (int) visitaRepository.countProblemasResolvidosNoMesPorSetor(inicio, fim, setor);
 
         // ⚡ 3. Total de Tasks no Mês (Funil: Visitas Oficiais + Hub de Execução)
