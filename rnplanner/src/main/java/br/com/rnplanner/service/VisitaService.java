@@ -44,9 +44,15 @@ public class VisitaService {
         visita.setQtdMissoes(missoes);
         visita.setFinalizada(true);
 
-        // Se tem anotação, fica PENDENTE. Se não tem, já marca como RESOLVIDO.
+        // 🔥 CORREÇÃO 2: A MÁGICA! O Java escaneia o JSON.
         if (anotacao != null && !anotacao.trim().isEmpty()) {
-            visita.setPendenciaStatus("PENDENTE");
+            // Se ainda tem algo escrito como "PENDENTE" no código JSON, a visita fica pendente.
+            if (anotacao.contains("\"status\":\"PENDENTE\"")) {
+                visita.setPendenciaStatus("PENDENTE");
+            } else {
+                // Se não tem a palavra PENDENTE, é porque você resolveu tudo!
+                visita.setPendenciaStatus("RESOLVIDO");
+            }
         } else {
             visita.setPendenciaStatus("RESOLVIDO");
         }
@@ -84,7 +90,6 @@ public class VisitaService {
         return new VisitaRelatorioDTO(v.getPdv().getNome(), v.getObservacao(), v.getQtdTasks(), v.getQtdOfertas(), v.getQtdMissoes());
     }
 
-    // 🔥 CORREÇÃO: O filtro "PENDENTE" sumiu. Agora ele manda tudo!
     public List<PendenciaDTO> listarPendenciasGlobaisPorSetor(String setor) {
         return visitaRepository.findAll().stream()
                 .filter(v -> v.getSetor() != null && v.getSetor().equals(setor))
