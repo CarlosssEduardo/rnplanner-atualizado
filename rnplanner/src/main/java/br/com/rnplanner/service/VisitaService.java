@@ -11,7 +11,6 @@ import br.com.rnplanner.repository.VisitaRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,8 +44,11 @@ public class VisitaService {
         visita.setQtdMissoes(missoes);
         visita.setFinalizada(true);
 
-        if (anotacao != null && !anotacao.isEmpty()) {
+        // Se tem anotação, fica PENDENTE. Se não tem, já marca como RESOLVIDO.
+        if (anotacao != null && !anotacao.trim().isEmpty()) {
             visita.setPendenciaStatus("PENDENTE");
+        } else {
+            visita.setPendenciaStatus("RESOLVIDO");
         }
 
         return visitaRepository.save(visita);
@@ -62,7 +64,6 @@ public class VisitaService {
         return new DashboardDiaDTO(missoes, tasks, ofertas, ids.size(), ids);
     }
 
-    // 🔥 CORREÇÃO DAS CONQUISTAS DO MÊS (PASSANDO O SETOR)
     public ResumoMesDTO obterResumoMes(String setor) {
         LocalDate inicio = LocalDate.now().withDayOfMonth(1);
         LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
@@ -83,17 +84,18 @@ public class VisitaService {
         return new VisitaRelatorioDTO(v.getPdv().getNome(), v.getObservacao(), v.getQtdTasks(), v.getQtdOfertas(), v.getQtdMissoes());
     }
 
+    // 🔥 CORREÇÃO: O filtro "PENDENTE" sumiu. Agora ele manda tudo!
     public List<PendenciaDTO> listarPendenciasGlobaisPorSetor(String setor) {
         return visitaRepository.findAll().stream()
                 .filter(v -> v.getSetor() != null && v.getSetor().equals(setor))
-                .filter(v -> "PENDENTE".equals(v.getPendenciaStatus()))
+                .filter(v -> v.getObservacao() != null && !v.getObservacao().trim().isEmpty())
                 .map(v -> {
                     PendenciaDTO dto = new PendenciaDTO();
                     dto.setId(v.getId().toString());
                     dto.setPdvId(v.getPdv().getId());
                     dto.setPdvNome(v.getPdv().getNome());
                     dto.setTexto(v.getObservacao());
-                    dto.setStatus(v.getPendenciaStatus());
+                    dto.setStatus(v.getPendenciaStatus() != null ? v.getPendenciaStatus() : "PENDENTE");
                     return dto;
                 }).collect(Collectors.toList());
     }

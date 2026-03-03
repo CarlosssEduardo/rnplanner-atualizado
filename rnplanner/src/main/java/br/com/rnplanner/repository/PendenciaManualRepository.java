@@ -9,6 +9,6 @@ import java.util.List;
 @Repository
 public interface PendenciaManualRepository extends JpaRepository<PendenciaManual, Long> {
 
-    // Traz todas as pendências avulsas daquele setor que ainda estão ativas
-    List<PendenciaManual> findBySetorAndStatus(String setor, String status);
+    // 🔥 Traz TODAS as pendências do setor (Pendentes e Resolvidas) para o Front-end organizar
+    List<PendenciaManual> findBySetor(String setor);
 }

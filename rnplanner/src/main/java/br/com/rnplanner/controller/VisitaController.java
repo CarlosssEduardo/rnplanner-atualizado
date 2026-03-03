@@ -5,9 +5,11 @@ import br.com.rnplanner.model.Visita;
 import br.com.rnplanner.model.PendenciaManual;
 import br.com.rnplanner.service.VisitaService;
 import br.com.rnplanner.repository.PendenciaManualRepository;
+import br.com.rnplanner.repository.LancamentoManualRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,10 +20,14 @@ public class VisitaController {
 
     private final VisitaService visitaService;
     private final PendenciaManualRepository pendenciaManualRepository;
+    private final LancamentoManualRepository lancamentoManualRepository;
 
-    public VisitaController(VisitaService visitaService, PendenciaManualRepository pendenciaManualRepository) {
+    public VisitaController(VisitaService visitaService,
+                            PendenciaManualRepository pendenciaManualRepository,
+                            LancamentoManualRepository lancamentoManualRepository) {
         this.visitaService = visitaService;
         this.pendenciaManualRepository = pendenciaManualRepository;
+        this.lancamentoManualRepository = lancamentoManualRepository;
     }
 
     @PostMapping("/iniciar/{pdvId}")
@@ -44,10 +50,33 @@ public class VisitaController {
         return ResponseEntity.ok(dashboard);
     }
 
-    // 🔥 CORREÇÃO: Agora o endpoint do mês aceita o setor na URL
     @GetMapping("/dashboard/mes/{setor}")
     public ResponseEntity<ResumoMesDTO> obterDashboardMes(@PathVariable String setor) {
-        return ResponseEntity.ok(visitaService.obterResumoMes(setor));
+        LocalDate inicio = LocalDate.now().withDayOfMonth(1);
+        LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+
+        // 1. Pega os dados das visitas oficiais
+        ResumoMesDTO resumoVisitas = visitaService.obterResumoMes(setor);
+
+        // 🔥 O IntelliJ vai adorar isso: Declaramos a variável sem valor inicial
+        long tasksHub;
+        try {
+            // Tenta buscar do banco
+            tasksHub = lancamentoManualRepository.sumTasksManuaisNoMes(inicio, fim, setor);
+        } catch (Exception e) {
+            // Se der erro (ex: banco vazio), aí sim ele vira zero
+            tasksHub = 0L;
+        }
+
+        // 3. Junta tudo
+        int totalTasks = resumoVisitas.getTotalTasksMes() + (int) tasksHub;
+
+        return ResponseEntity.ok(new ResumoMesDTO(
+                resumoVisitas.getDiasTrabalhados(),
+                resumoVisitas.getProblemasResolvidos(),
+                totalTasks,
+                "Top 10 - CDD Belém"
+        ));
     }
 
     @GetMapping
@@ -63,7 +92,7 @@ public class VisitaController {
     @GetMapping("/pendencias/{setor}")
     public ResponseEntity<List<PendenciaDTO>> listarPendenciasGlobais(@PathVariable String setor) {
         List<PendenciaDTO> pendencias = new ArrayList<>(visitaService.listarPendenciasGlobaisPorSetor(setor));
-        List<PendenciaManual> manuais = pendenciaManualRepository.findBySetorAndStatus(setor, "PENDENTE");
+        List<PendenciaManual> manuais = pendenciaManualRepository.findBySetor(setor);
 
         for (PendenciaManual pm : manuais) {
             PendenciaDTO dto = new PendenciaDTO();
@@ -71,7 +100,7 @@ public class VisitaController {
             dto.setPdvId(0L);
             dto.setPdvNome("Anotação Avulsa");
             dto.setTexto(pm.getTexto());
-            dto.setStatus(pm.getStatus());
+            dto.setStatus(pm.getStatus() != null ? pm.getStatus() : "PENDENTE");
             pendencias.add(dto);
         }
         return ResponseEntity.ok(pendencias);
