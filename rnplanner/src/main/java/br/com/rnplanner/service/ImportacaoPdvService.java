@@ -4,58 +4,74 @@ import br.com.rnplanner.model.Pdv;
 import br.com.rnplanner.repository.PdvRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
-// Marca como serviço do Spring.
-// Ou seja, classe de regra de negócio que pode ser usada por controller.
 public class ImportacaoPdvService {
 
     private final PdvRepository pdvRepository;
-    // variável que guarda o repository.
 
     public ImportacaoPdvService(PdvRepository pdvRepository) {
         this.pdvRepository = pdvRepository;
-        // Injeção de dependência:
-        // Spring entrega o repository pronto pra usar.
     }
 
+    @Transactional
     public void importar(InputStream inputStream) throws Exception {
-        // Metodo principal.
-        // Recebe o arquivo Excel como entrada.
-
         Workbook workbook = WorkbookFactory.create(inputStream);
-        // Abre o Excel usando Apache POI.
+        Sheet sheet = workbook.getSheetAt(0); // Pega a primeira aba
 
-        Sheet sheet = workbook.getSheetAt(0);
-        // Pega a primeira aba do Excel.
+        List<Pdv> pdvsParaSalvar = new ArrayList<>();
 
+        // Começa no '1' para pular o cabeçalho (SETOR, PDV, Nome)
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-            // Percorre todas as linhas.
-            // Começa em 1 porque a linha 0 geralmente é o cabeçalho.
-
             Row row = sheet.getRow(i);
-            // Pega a linha atual.
+            if (row == null) continue; // Pula linhas totalmente em branco
 
-            Integer codigo = (int) row.getCell(0).getNumericCellValue();
-            // Lê a primeira coluna (código).
+            try {
+                // 👉 Lendo Coluna A (0): SETOR
+                String setor = "";
+                if (row.getCell(0) != null) {
+                    // Força a leitura como texto, mesmo que seja o número "503"
+                    row.getCell(0).setCellType(CellType.STRING);
+                    setor = row.getCell(0).getStringCellValue().trim();
+                }
 
-            String nome = row.getCell(1).getStringCellValue();
-            // Lê a segunda coluna (nome).
+                // 👉 Lendo Coluna B (1): CÓDIGO DO PDV
+                Integer codigo = 0;
+                if (row.getCell(1) != null) {
+                    codigo = (int) row.getCell(1).getNumericCellValue();
+                }
 
-            Pdv pdv = new Pdv();
-            // Cria um objeto PDV.
+                // 👉 Lendo Coluna C (2): NOME DO PDV
+                String nome = "";
+                if (row.getCell(2) != null) {
+                    row.getCell(2).setCellType(CellType.STRING);
+                    nome = row.getCell(2).getStringCellValue().trim();
+                }
 
-            pdv.setCodigo(codigo);
-            pdv.setNome(nome);
-            // Preenche os dados vindos do Excel.
+                // Só salva se o código do PDV existir (evita salvar sujeira)
+                if (codigo > 0) {
+                    Pdv pdv = new Pdv();
+                    pdv.setId((long) codigo); // O ID no banco será o próprio código
+                    pdv.setCodigo(codigo);
+                    pdv.setNome(nome);
+                    pdv.setSetor(setor); // 👈 Etiqueta perfeita!
 
-            pdvRepository.save(pdv);
-            // Salva no banco.
+                    pdvsParaSalvar.add(pdv);
+                }
+
+            } catch (Exception e) {
+                // Se der erro em uma linha (ex: formatada errado), avisa no console mas continua lendo o resto
+                System.out.println("⚠️ Erro ao ler a linha " + (i + 1) + " do Excel: " + e.getMessage());
+            }
         }
 
+        // Salva o pelotão inteiro de uma vez no banco de dados!
+        pdvRepository.saveAll(pdvsParaSalvar);
         workbook.close();
-        // Fecha o arquivo para liberar memória.
     }
 }

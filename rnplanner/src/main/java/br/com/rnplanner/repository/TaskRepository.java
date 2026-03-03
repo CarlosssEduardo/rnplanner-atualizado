@@ -47,4 +47,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * quantas OFERTA hoje
      */
     long countByTipoAndVisitaData(TipoTask tipo, LocalDate data);
+
+
+    /*
+     * Contagem ACUMULADA do dia inteiro POR SETOR
+     * O Spring faz JOIN automático: Task → Visita → Pdv → Setor
+     */
+    long countByTipoAndVisitaDataAndVisitaPdvSetor(TipoTask tipo, LocalDate data, String setor);
 }

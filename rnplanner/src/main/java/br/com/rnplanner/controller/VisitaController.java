@@ -1,91 +1,72 @@
 package br.com.rnplanner.controller;
 
 import br.com.rnplanner.dto.DashboardDiaDTO;
+import br.com.rnplanner.dto.PendenciaDTO;
+import br.com.rnplanner.dto.FinalizarVisitaDTO;
+import br.com.rnplanner.dto.ResumoMesDTO;
 import br.com.rnplanner.dto.VisitaRelatorioDTO;
 import br.com.rnplanner.model.Visita;
 import br.com.rnplanner.service.VisitaService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/*
- * Controller de VISITAS
- * Base da API → /visitas
- */
 @RestController
 @RequestMapping("/visitas")
+@CrossOrigin(origins = "*")
 public class VisitaController {
 
-    /*
-     * Service → onde fica a regra de negócio real
-     */
     private final VisitaService visitaService;
 
-    /*
-     * Injeção de dependência
-     */
     public VisitaController(VisitaService visitaService) {
         this.visitaService = visitaService;
     }
 
-    /*
-     * 1️⃣ INICIAR VISITA
-     * POST /visitas/iniciar/{pdvId}
-     *
-     * Cria uma nova visita para aquele PDV
-     * Já traz o histórico da última visita
-     */
     @PostMapping("/iniciar/{pdvId}")
-    public Visita iniciarVisita(@PathVariable Long pdvId) {
-        return visitaService.iniciarVisita(pdvId);
+    public ResponseEntity<Visita> iniciarVisita(@PathVariable Long pdvId) {
+        Visita visita = visitaService.iniciarVisita(pdvId);
+        return ResponseEntity.ok(visita);
     }
 
-    /*
-     * 2️⃣ RESUMO DO PDV
-     * GET /visitas/{id}/resumo
-     *
-     * Mostra quantas tasks, missões e ofertas foram feitas
-     */
-    @GetMapping("/{id}/resumo")
-    public VisitaRelatorioDTO verResumo(@PathVariable Long id) {
-        return visitaService.obterResumo(id);
+    @PutMapping(value = "/{id}/finalizar", consumes = "application/json")
+    public ResponseEntity<Visita> finalizar(@PathVariable Long id, @RequestBody FinalizarVisitaDTO dto) {
+        Visita visitaFinalizada = visitaService.finalizarVisita(
+                id,
+                dto.getAnotacao(),
+                dto.getQtdTasks(),
+                dto.getQtdOfertas(),
+                dto.getQtdMissoes()
+        );
+        return ResponseEntity.ok(visitaFinalizada);
     }
 
-    /*
-     * 3️⃣ FINALIZAR VISITA
-     * PUT /visitas/{id}/finalizar
-     *
-     * Salva a anotação final e encerra a visita
-     */
-    @PutMapping(value = "/{id}/finalizar", consumes = "text/plain")
-    public Visita finalizar(@PathVariable Long id, @RequestBody String anotacao) {
-        return visitaService.finalizarVisita(id, anotacao);
+    // 🔥 ROTA BLINDADA: O celular tem que avisar o setor! (Ex: /visitas/dashboard/501)
+    @GetMapping("/dashboard/{setor}")
+    public ResponseEntity<DashboardDiaDTO> obterDashboardGeral(@PathVariable String setor) {
+        DashboardDiaDTO dashboard = visitaService.obterDashboardDoDiaPorSetor(setor);
+        return ResponseEntity.ok(dashboard);
     }
 
-    /*
-     * 4️⃣ DASHBOARD GERAL DO DIA
-     * GET /visitas/dashboard/geral
-     *
-     * Mostra produtividade acumulada
-     */
-    @GetMapping("/dashboard/geral")
-    public DashboardDiaDTO verDashboardGeral() {
-        return visitaService.obterDashboardGeral();
+    // 🔥 NOVO ENDPOINT: Dashboard Acumulado do Mês
+    @GetMapping("/dashboard/mes")
+    public ResponseEntity<ResumoMesDTO> obterDashboardMes() {
+        return ResponseEntity.ok(visitaService.obterResumoMes());
     }
 
-    /*
-     * 5️⃣ UTILITÁRIOS
-     */
-
-    // Buscar visita específica
-    @GetMapping("/{id}")
-    public Visita buscarPorId(@PathVariable Long id) {
-        return visitaService.buscarPorId(id);
-    }
-
-    // Listar todas visitas
     @GetMapping
-    public List<Visita> listarTodas() {
-        return visitaService.listarTodas();
+    public ResponseEntity<List<Visita>> listarTodas() {
+        return ResponseEntity.ok(visitaService.listarTodas());
+    }
+
+    @GetMapping("/{id}/resumo")
+    public ResponseEntity<VisitaRelatorioDTO> obterResumo(@PathVariable Long id) {
+        return ResponseEntity.ok(visitaService.obterResumo(id));
+    }
+
+    // 🔥 ROTA BLINDADA: Pendências apenas do setor! (Ex: /visitas/pendencias/501)
+    @GetMapping("/pendencias/{setor}")
+    public ResponseEntity<List<PendenciaDTO>> listarPendenciasGlobais(@PathVariable String setor) {
+        return ResponseEntity.ok(visitaService.listarPendenciasGlobaisPorSetor(setor));
     }
 }

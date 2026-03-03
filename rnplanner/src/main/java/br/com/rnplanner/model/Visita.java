@@ -11,54 +11,42 @@ import java.util.List;
 
 /**
  * 🎯 RESPONSABILIDADE: Orquestrar o evento da visita em campo.
- * Esta classe é o "coração" da aplicação; ela vincula um Ponto de Venda (PDV)
- * a uma data específica e a uma lista de tarefas que devem ser executadas.
+ * Agora com Contadores de Volume e Caderno Digital (CRM).
  */
 @Entity
 @Data
-@NoArgsConstructor // 🛠️ Essencial para o Hibernate instanciar a classe ao buscar do banco.
+@NoArgsConstructor
 @AllArgsConstructor
 public class Visita {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    /** * 🆔 Esse campo é o identificador único da visita e o banco gera ele automaticamente quando você salva.
-     */
     private Long id;
 
-    /**
-     * 📅 CONTROLE TEMPORAL: Armazena a data em que a visita foi ou será realizada.
-     */
     private LocalDate data;
 
     @Column(columnDefinition = "TEXT")
-    /**
-     * 📝 FEEDBACK DO CAMPO: Campo de texto longo para observações detalhadas
-     * sobre o que aconteceu durante a visita (ex: "Cliente não estava no local").
-     */
     private String observacao;
 
-    /**
-     * ✅ STATUS DO CICLO DE VIDA: Indica se o atendimento foi concluído pelo representante.
-     */
     private boolean finalizada;
+
+    // 🔥 NOVOS CAMPOS: Contadores Rápidos de Volume
+    @Column(columnDefinition = "integer default 0")
+    private int qtdTasks = 0;
+
+    @Column(columnDefinition = "integer default 0")
+    private int qtdOfertas = 0;
+
+    @Column(columnDefinition = "integer default 0")
+    private int qtdMissoes = 0;
 
     @ManyToOne
     @JoinColumn(name = "pdv_id")
-    /**
-     * 📍 LOCALIZAÇÃO: Relacionamento Muitos-para-Um.
-     * Indica em qual PDV esta visita específica está ocorrendo.
-     */
     private Pdv pdv;
 
+    // Nota de Arquiteto: Mantivemos a lista antiga para não quebrar
+    // os seus Controllers velhos, mas o App novo não usará mais isso!
     @OneToMany(mappedBy = "visita", cascade = CascadeType.ALL)
     @JsonManagedReference
-    /**
-     * 📋 COMPOSIÇÃO DE TAREFAS:
-     * 1. OneToMany: Uma visita pode ter várias tarefas vinculadas.
-     * 2. mappedBy: Indica que o controle do relacionamento está no campo 'visita' da classe Task.
-     * 3. CascadeType.ALL: Garante a integridade; se eu salvar uma Visita, o Spring salva todas as suas Tasks automaticamente.
-     * 4. JsonManagedReference: É o "Lado Mestre" do relacionamento JSON. Ele permite que as tarefas sejam listadas dentro da visita.
-     */
     private List<Task> tasks;
 }
