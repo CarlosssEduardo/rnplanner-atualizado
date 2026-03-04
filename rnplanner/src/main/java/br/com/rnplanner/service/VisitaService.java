@@ -1,15 +1,9 @@
 package br.com.rnplanner.service;
 
-import br.com.rnplanner.dto.DashboardDiaDTO;
-import br.com.rnplanner.dto.PendenciaDTO;
-import br.com.rnplanner.dto.ResumoMesDTO;
-import br.com.rnplanner.dto.VisitaRelatorioDTO;
-import br.com.rnplanner.model.Pdv;
-import br.com.rnplanner.model.Visita;
-import br.com.rnplanner.repository.PdvRepository;
-import br.com.rnplanner.repository.VisitaRepository;
+import br.com.rnplanner.dto.*;
+import br.com.rnplanner.model.*;
+import br.com.rnplanner.repository.*;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,7 +24,6 @@ public class VisitaService {
         Visita visita = new Visita();
         visita.setPdv(pdv);
         visita.setData(LocalDate.now());
-        visita.setDataExibicao(LocalDate.now());
         visita.setFinalizada(false);
         visita.setSetor(pdv.getSetor());
         return visitaRepository.save(visita);
@@ -43,47 +36,28 @@ public class VisitaService {
         visita.setQtdOfertas(ofertas);
         visita.setQtdMissoes(missoes);
         visita.setFinalizada(true);
-
-        // 🔥 CORREÇÃO 2: A MÁGICA! O Java escaneia o JSON.
-        if (anotacao != null && !anotacao.trim().isEmpty()) {
-            // Se ainda tem algo escrito como "PENDENTE" no código JSON, a visita fica pendente.
-            if (anotacao.contains("\"status\":\"PENDENTE\"")) {
-                visita.setPendenciaStatus("PENDENTE");
-            } else {
-                // Se não tem a palavra PENDENTE, é porque você resolveu tudo!
-                visita.setPendenciaStatus("RESOLVIDO");
-            }
-        } else {
-            visita.setPendenciaStatus("RESOLVIDO");
-        }
-
+        visita.setPendenciaStatus(anotacao != null && anotacao.contains("\"status\":\"PENDENTE\"") ? "PENDENTE" : "RESOLVIDO");
         return visitaRepository.save(visita);
     }
 
     public DashboardDiaDTO obterDashboardDoDiaPorSetor(String setor) {
-        LocalDate hoje = LocalDate.now();
-        long tasks = visitaRepository.sumTasksByDataAndSetor(hoje, setor);
-        long ofertas = visitaRepository.sumOfertasByDataAndSetor(hoje, setor);
-        long missoes = visitaRepository.sumMissoesByDataAndSetor(hoje, setor);
-        List<Long> ids = visitaRepository.findPdvIdsVisitadosHojePorSetor(hoje, setor);
-
+        long tasks = visitaRepository.sumTasksByDataAndSetor(setor);
+        long ofertas = visitaRepository.sumOfertasByDataAndSetor(setor);
+        long missoes = visitaRepository.sumMissoesByDataAndSetor(setor);
+        List<Long> ids = visitaRepository.findPdvIdsVisitadosHojePorSetor(setor);
         return new DashboardDiaDTO(missoes, tasks, ofertas, ids.size(), ids);
     }
 
     public ResumoMesDTO obterResumoMes(String setor) {
         LocalDate inicio = LocalDate.now().withDayOfMonth(1);
         LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-
         int dias = (int) visitaRepository.countDiasTrabalhadosNoMesPorSetor(inicio, fim, setor);
-        int tasks = (int) visitaRepository.sumTasksNoMesPorSetor(inicio, fim, setor);
         int resolvidos = (int) visitaRepository.countProblemasResolvidosNoMesPorSetor(inicio, fim, setor);
-
+        int tasks = (int) visitaRepository.sumTasksNoMesPorSetor(inicio, fim, setor);
         return new ResumoMesDTO(dias, resolvidos, tasks, "Top 10 - CDD Belém");
     }
 
-    public List<Visita> listarTodas() {
-        return visitaRepository.findAll();
-    }
+    public List<Visita> listarTodas() { return visitaRepository.findAll(); }
 
     public VisitaRelatorioDTO obterResumo(Long id) {
         Visita v = visitaRepository.findById(id).orElseThrow();
@@ -100,7 +74,7 @@ public class VisitaService {
                     dto.setPdvId(v.getPdv().getId());
                     dto.setPdvNome(v.getPdv().getNome());
                     dto.setTexto(v.getObservacao());
-                    dto.setStatus(v.getPendenciaStatus() != null ? v.getPendenciaStatus() : "PENDENTE");
+                    dto.setStatus(v.getPendenciaStatus());
                     return dto;
                 }).collect(Collectors.toList());
     }
