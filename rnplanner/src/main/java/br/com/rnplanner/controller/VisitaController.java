@@ -95,6 +95,13 @@ public class VisitaController {
         return ResponseEntity.ok(visitaService.obterItensPendentes(id));
     }
 
+    // Substitua o metodo que deu erro por este (por volta da linha 100)
+    @GetMapping("/{id}")
+    public ResponseEntity<Visita> obterPorId(@PathVariable Long id) {
+        // Chamamos o service em vez do repository direto
+        return ResponseEntity.ok(visitaService.buscarPorId(id));
+    }
+
     @GetMapping("/pendencias/{setor}")
     public ResponseEntity<List<PendenciaDTO>> listarPendenciasGlobais(@PathVariable String setor) {
         List<PendenciaDTO> pendencias = new ArrayList<>(visitaService.listarPendenciasGlobaisPorSetor(setor));

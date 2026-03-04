@@ -111,6 +111,12 @@ public class VisitaService {
         return new VisitaRelatorioDTO(v.getPdv().getNome(), v.getObservacao(), v.getQtdTasks(), v.getQtdOfertas(), v.getQtdMissoes());
     }
 
+    // Adicione isso antes do último } do VisitaService.java
+    public Visita buscarPorId(Long id) {
+        return visitaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Visita não encontrada"));
+    }
+
     public List<PendenciaDTO> listarPendenciasGlobaisPorSetor(String setor) {
         return visitaRepository.findAll().stream()
                 .filter(v -> v.getSetor() != null && v.getSetor().equals(setor))
