@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface VisitaRepository extends JpaRepository<Visita, Long> {
@@ -40,4 +41,7 @@ public interface VisitaRepository extends JpaRepository<Visita, Long> {
 
     @Query("SELECT COUNT(v) FROM Visita v WHERE v.setor = :setor AND v.pendenciaStatus = 'RESOLVIDO' AND v.data >= :inicio AND v.data <= :fim")
     long countProblemasResolvidosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
+
+    // 🔥 Adicione esta linha dentro do seu VisitaRepository
+    Optional<Visita> findFirstByPdvIdAndDataOrderByIdDesc(Long pdvId, LocalDate data);
 }

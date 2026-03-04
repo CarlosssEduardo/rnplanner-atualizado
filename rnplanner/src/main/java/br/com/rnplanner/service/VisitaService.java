@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,13 +28,22 @@ public class VisitaService {
     }
 
     public Visita iniciarVisita(Long pdvId) {
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+
+        // 🔥 A MÁGICA AQUI: Antes de criar, ele procura se você já abriu esse PDV hoje!
+        Optional<Visita> visitaHoje = visitaRepository.findFirstByPdvIdAndDataOrderByIdDesc(pdvId, hoje);
+
+        if (visitaHoje.isPresent()) {
+            return visitaHoje.get(); // Devolve a visita #20 com o seu Boleto e suas 10 Tasks!
+        }
+
+        // Se realmente for o primeiro acesso do dia, ele cria uma zerada.
         Pdv pdv = pdvRepository.findById(pdvId).orElseThrow();
         Visita visita = new Visita();
         visita.setPdv(pdv);
-        // 🕒 BLINDAGEM: Garante a data de Brasília para evitar erro de fuso na Azure
-        visita.setData(LocalDate.now(ZoneId.of("America/Sao_Paulo")));
+        visita.setData(hoje);
         visita.setFinalizada(false);
-        visita.setSetor(pdv.getSetor()); // Carimba o setor direto na visita
+        visita.setSetor(pdv.getSetor());
         return visitaRepository.save(visita);
     }
 
