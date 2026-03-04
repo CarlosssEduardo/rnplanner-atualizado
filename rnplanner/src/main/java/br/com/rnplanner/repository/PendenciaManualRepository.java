@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface PendenciaManualRepository extends JpaRepository<PendenciaManual, Long> {
 
-    // 🔥 Devolvendo a função que usamos para contar os resolvidos do Hub!
+    // 🔥 Essa é a linha que o Java sentiu falta e bloqueou tudo!
     List<PendenciaManual> findBySetorAndStatus(String setor, String status);
 
     List<PendenciaManual> findBySetor(String setor);
