@@ -13,14 +13,14 @@ public interface LancamentoManualRepository extends JpaRepository<LancamentoManu
 
     List<LancamentoManual> findBySetorAndData(String setor, LocalDate data);
 
-    @Query("SELECT COALESCE(SUM(l.tasks), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data = CURRENT_DATE")
-    long sumTasksManuais(@Param("setor") String setor);
+    @Query("SELECT COALESCE(SUM(l.tasks), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data = :data")
+    long sumTasksManuais(@Param("data") LocalDate data, @Param("setor") String setor);
 
-    @Query("SELECT COALESCE(SUM(l.ofertas), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data = CURRENT_DATE")
-    long sumOfertasManuais(@Param("setor") String setor);
+    @Query("SELECT COALESCE(SUM(l.ofertas), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data = :data")
+    long sumOfertasManuais(@Param("data") LocalDate data, @Param("setor") String setor);
 
-    @Query("SELECT COALESCE(SUM(l.missoes), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data = CURRENT_DATE")
-    long sumMissoesManuais(@Param("setor") String setor);
+    @Query("SELECT COALESCE(SUM(l.missoes), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data = :data")
+    long sumMissoesManuais(@Param("data") LocalDate data, @Param("setor") String setor);
 
     @Query("SELECT COALESCE(SUM(l.tasks), 0) FROM LancamentoManual l WHERE l.setor = :setor AND l.data >= :inicio AND l.data <= :fim")
     long sumTasksManuaisNoMes(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);

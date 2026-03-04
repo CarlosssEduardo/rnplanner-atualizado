@@ -15,27 +15,29 @@ public interface VisitaRepository extends JpaRepository<Visita, Long> {
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM Visita v WHERE v.pdv.setor IN :setores")
+    @Query("DELETE FROM Visita v WHERE v.setor IN :setores")
     void deleteByPdvSetorIn(@Param("setores") List<String> setores);
 
-    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.pdv.setor = :setor AND v.data = CURRENT_DATE AND v.finalizada = true")
-    long sumTasksByDataAndSetor(@Param("setor") String setor);
+    // Troque as queries do dia por estas (exemplo da Task):
+    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.setor = :setor AND v.data = :data AND v.finalizada = true")
+    long sumTasksByDataAndSetor(@Param("data") LocalDate data, @Param("setor") String setor);
+    // Repita para Ofertas e Missões usando o parâmetro :data
 
-    @Query("SELECT COALESCE(SUM(v.qtdOfertas), 0) FROM Visita v WHERE v.pdv.setor = :setor AND v.data = CURRENT_DATE AND v.finalizada = true")
-    long sumOfertasByDataAndSetor(@Param("setor") String setor);
+    @Query("SELECT COALESCE(SUM(v.qtdOfertas), 0) FROM Visita v WHERE v.setor = :setor AND v.data = :data AND v.finalizada = true")
+    long sumOfertasByDataAndSetor(@Param("data") LocalDate data, @Param("setor") String setor);
 
-    @Query("SELECT COALESCE(SUM(v.qtdMissoes), 0) FROM Visita v WHERE v.pdv.setor = :setor AND v.data = CURRENT_DATE AND v.finalizada = true")
-    long sumMissoesByDataAndSetor(@Param("setor") String setor);
+    @Query("SELECT COALESCE(SUM(v.qtdMissoes), 0) FROM Visita v WHERE v.setor = :setor AND v.data = :data AND v.finalizada = true")
+    long sumMissoesByDataAndSetor(@Param("data") LocalDate data, @Param("setor") String setor);
 
-    @Query("SELECT v.pdv.id FROM Visita v WHERE v.pdv.setor = :setor AND v.data = CURRENT_DATE AND v.finalizada = true")
-    List<Long> findPdvIdsVisitadosHojePorSetor(@Param("setor") String setor);
+    @Query("SELECT v.pdv.id FROM Visita v WHERE v.setor = :setor AND v.data = :data AND v.finalizada = true")
+    List<Long> findPdvIdsVisitadosHojePorSetor(@Param("data") LocalDate data, @Param("setor") String setor);
 
-    @Query("SELECT COUNT(DISTINCT v.data) FROM Visita v WHERE v.pdv.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
+    @Query("SELECT COUNT(DISTINCT v.data) FROM Visita v WHERE v.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
     long countDiasTrabalhadosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
 
-    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.pdv.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
+    @Query("SELECT COALESCE(SUM(v.qtdTasks), 0) FROM Visita v WHERE v.setor = :setor AND v.data >= :inicio AND v.data <= :fim AND v.finalizada = true")
     long sumTasksNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
 
-    @Query("SELECT COUNT(v) FROM Visita v WHERE v.pdv.setor = :setor AND v.pendenciaStatus = 'RESOLVIDO' AND v.data >= :inicio AND v.data <= :fim")
+    @Query("SELECT COUNT(v) FROM Visita v WHERE v.setor = :setor AND v.pendenciaStatus = 'RESOLVIDO' AND v.data >= :inicio AND v.data <= :fim")
     long countProblemasResolvidosNoMesPorSetor(@Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim, @Param("setor") String setor);
 }

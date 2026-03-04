@@ -4,7 +4,9 @@ import br.com.rnplanner.dto.*;
 import br.com.rnplanner.model.*;
 import br.com.rnplanner.repository.*;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,19 +15,24 @@ public class VisitaService {
 
     private final VisitaRepository visitaRepository;
     private final PdvRepository pdvRepository;
+    private final LancamentoManualRepository lancamentoManualRepository; // 🔥 O ELO PERDIDO: Adicionado para somar o Hub
 
-    public VisitaService(VisitaRepository visitaRepository, PdvRepository pdvRepository) {
+    public VisitaService(VisitaRepository visitaRepository,
+                         PdvRepository pdvRepository,
+                         LancamentoManualRepository lancamentoManualRepository) {
         this.visitaRepository = visitaRepository;
         this.pdvRepository = pdvRepository;
+        this.lancamentoManualRepository = lancamentoManualRepository;
     }
 
     public Visita iniciarVisita(Long pdvId) {
         Pdv pdv = pdvRepository.findById(pdvId).orElseThrow();
         Visita visita = new Visita();
         visita.setPdv(pdv);
-        visita.setData(LocalDate.now());
+        // 🕒 BLINDAGEM: Garante a data de Brasília para evitar erro de fuso na Azure
+        visita.setData(LocalDate.now(ZoneId.of("America/Sao_Paulo")));
         visita.setFinalizada(false);
-        visita.setSetor(pdv.getSetor());
+        visita.setSetor(pdv.getSetor()); // Carimba o setor direto na visita
         return visitaRepository.save(visita);
     }
 
@@ -36,28 +43,67 @@ public class VisitaService {
         visita.setQtdOfertas(ofertas);
         visita.setQtdMissoes(missoes);
         visita.setFinalizada(true);
-        visita.setPendenciaStatus(anotacao != null && anotacao.contains("\"status\":\"PENDENTE\"") ? "PENDENTE" : "RESOLVIDO");
+
+        // 🕵️ TRADUTOR DO EDUARDO: Identifica se há itens pendentes no JSON do React
+        if (anotacao != null && anotacao.contains("\"status\":\"PENDENTE\"")) {
+            visita.setPendenciaStatus("PENDENTE");
+        } else {
+            visita.setPendenciaStatus("RESOLVIDO");
+        }
         return visitaRepository.save(visita);
     }
 
+    // 🚀 O FUNIL DO DIA: Soma Visitas + Hub para a barra de 100% andar!
     public DashboardDiaDTO obterDashboardDoDiaPorSetor(String setor) {
-        long tasks = visitaRepository.sumTasksByDataAndSetor(setor);
-        long ofertas = visitaRepository.sumOfertasByDataAndSetor(setor);
-        long missoes = visitaRepository.sumMissoesByDataAndSetor(setor);
-        List<Long> ids = visitaRepository.findPdvIdsVisitadosHojePorSetor(setor);
-        return new DashboardDiaDTO(missoes, tasks, ofertas, ids.size(), ids);
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+
+        // Torneira 1: Visitas Oficiais
+        long tasksOficiais = visitaRepository.sumTasksByDataAndSetor(hoje, setor);
+        long ofertasOficiais = visitaRepository.sumOfertasByDataAndSetor(hoje, setor);
+        long missoesOficiais = visitaRepository.sumMissoesByDataAndSetor(hoje, setor);
+
+        // Torneira 2: Hub de Execução (Lançamento Manual)
+        long tasksHub = lancamentoManualRepository.sumTasksManuais(hoje, setor);
+        long ofertasHub = lancamentoManualRepository.sumOfertasManuais(hoje, setor);
+        long missoesHub = lancamentoManualRepository.sumMissoesManuais(hoje, setor);
+
+        // Soma Total
+        long tasksTotal = tasksOficiais + tasksHub;
+        long ofertasTotal = ofertasOficiais + ofertasHub;
+        long missoesTotal = missoesOficiais + missoesHub;
+
+        List<Long> ids = visitaRepository.findPdvIdsVisitadosHojePorSetor(hoje, setor);
+
+        return new DashboardDiaDTO(missoesTotal, tasksTotal, ofertasTotal, ids.size(), ids);
     }
 
+    // 🏆 O RESUMO DO MÊS: Resolve o erro de "0 Dias Trabalhados"
     public ResumoMesDTO obterResumoMes(String setor) {
-        LocalDate inicio = LocalDate.now().withDayOfMonth(1);
-        LocalDate fim = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        LocalDate hoje = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
+        LocalDate inicio = hoje.withDayOfMonth(1);
+        LocalDate fim = hoje.withDayOfMonth(hoje.lengthOfMonth());
+
+        // Dados das visitas
         int dias = (int) visitaRepository.countDiasTrabalhadosNoMesPorSetor(inicio, fim, setor);
+        long tasksOficiais = visitaRepository.sumTasksNoMesPorSetor(inicio, fim, setor);
         int resolvidos = (int) visitaRepository.countProblemasResolvidosNoMesPorSetor(inicio, fim, setor);
-        int tasks = (int) visitaRepository.sumTasksNoMesPorSetor(inicio, fim, setor);
-        return new ResumoMesDTO(dias, resolvidos, tasks, "Top 10 - CDD Belém");
+
+        // Dados do Hub no mês
+        long tasksHub = lancamentoManualRepository.sumTasksManuaisNoMes(inicio, fim, setor);
+
+        int totalTasksMes = (int) (tasksOficiais + tasksHub);
+
+        // 🔥 LÓGICA DE ATIVIDADE: Se trabalhou no Hub mas não abriu visita, conta como 1 dia.
+        if (dias == 0 && totalTasksMes > 0) {
+            dias = 1;
+        }
+
+        return new ResumoMesDTO(dias, resolvidos, totalTasksMes, "Top 10 - CDD Belém");
     }
 
-    public List<Visita> listarTodas() { return visitaRepository.findAll(); }
+    public List<Visita> listarTodas() {
+        return visitaRepository.findAll();
+    }
 
     public VisitaRelatorioDTO obterResumo(Long id) {
         Visita v = visitaRepository.findById(id).orElseThrow();
@@ -74,7 +120,7 @@ public class VisitaService {
                     dto.setPdvId(v.getPdv().getId());
                     dto.setPdvNome(v.getPdv().getNome());
                     dto.setTexto(v.getObservacao());
-                    dto.setStatus(v.getPendenciaStatus());
+                    dto.setStatus(v.getPendenciaStatus() != null ? v.getPendenciaStatus() : "PENDENTE");
                     return dto;
                 }).collect(Collectors.toList());
     }
