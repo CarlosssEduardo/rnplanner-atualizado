@@ -89,6 +89,12 @@ public class VisitaController {
         return ResponseEntity.ok(visitaService.obterResumo(id));
     }
 
+    // Adicione esta rota ao seu VisitaController.java
+    @GetMapping("/{id}/itens-pendentes")
+    public ResponseEntity<List<String>> obterItens(@PathVariable Long id) {
+        return ResponseEntity.ok(visitaService.obterItensPendentes(id));
+    }
+
     @GetMapping("/pendencias/{setor}")
     public ResponseEntity<List<PendenciaDTO>> listarPendenciasGlobais(@PathVariable String setor) {
         List<PendenciaDTO> pendencias = new ArrayList<>(visitaService.listarPendenciasGlobaisPorSetor(setor));

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -123,5 +124,24 @@ public class VisitaService {
                     dto.setStatus(v.getPendenciaStatus() != null ? v.getPendenciaStatus() : "PENDENTE");
                     return dto;
                 }).collect(Collectors.toList());
+    }
+
+    // Adicione este método ao seu VisitaService.java
+    public List<String> obterItensPendentes(Long visitaId) {
+        Visita v = visitaRepository.findById(visitaId).orElseThrow();
+        String obs = v.getObservacao();
+
+        List<String> itens = new ArrayList<>();
+        if (obs != null && obs.contains("[")) {
+            // 🔥 MÁGICA: Extrai os textos do meio do JSON para a tela de detalhe
+            String[] partes = obs.split("\"texto\":\"");
+            for (int i = 1; i < partes.length; i++) {
+                String texto = partes[i].split("\"")[0];
+                itens.add(texto);
+            }
+        } else if (obs != null && !obs.trim().isEmpty()) {
+            itens.add(obs); // Texto simples
+        }
+        return itens;
     }
 }
